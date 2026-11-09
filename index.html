@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>초스 – 체스 × 포커</title>
+<style>
+:root{--bg:#312e2b;--pn:#262421;--tx:#fff;--mu:#a7a6a2;--gr:#81b64c;--lt:#eeeed2;--dk:#769656;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root{--bg:#ebeae6;--pn:#fff;--tx:#222;--mu:#666;color-scheme:light}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 'Noto Sans KR',system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--pn)}
+.logo{font-weight:800;font-size:22px;color:var(--gr);cursor:pointer}.mu{color:var(--mu);font-size:13px}
+button{font:inherit;color:#fff;background:#4a4846;border:0;border-bottom:4px solid #3a3836;border-radius:8px;padding:10px 14px;cursor:pointer}
+button.g{background:var(--gr);border-color:#5d9948;font-weight:700}button:disabled{opacity:.4}
+input{flex:1;min-width:0;padding:10px;border:0;border-radius:8px;background:#3a3836;color:#fff;font:inherit;text-transform:uppercase}
+main{max-width:1000px;margin:auto;padding:12px}.card{background:var(--pn);border-radius:10px;padding:14px;margin-bottom:10px}
+#home{text-align:center}#home h1{font-size:34px;margin:20px 0 4px}#home .card{display:flex;flex-direction:column;gap:10px;max-width:380px;margin:18px auto}
+#game{display:none;grid-template-columns:minmax(0,560px) 1fr;gap:14px}@media(max-width:800px){#game{grid-template-columns:1fr}}
+#bd{display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);aspect-ratio:1;width:100%;border-radius:4px;overflow:hidden}
+.sq{display:flex;align-items:center;justify-content:center;font-size:min(9vw,54px);line-height:1;position:relative;user-select:none;cursor:pointer}
+.l{background:#eeeed2}.d{background:#769656}.sq.sel{background:#f6f669}
+.sq.mv::after{content:'';width:30%;height:30%;border-radius:50%;background:rgba(0,0,0,.22);position:absolute}
+.sq.cp::after{width:92%;height:92%;background:none;border:5px solid rgba(0,0,0,.25)}
+.w{color:#fff;text-shadow:0 0 2px #000,0 0 3px #000,0 0 3px #000}.k{color:#2b2b2b;text-shadow:0 0 1px #999}
+.pl{display:flex;justify-content:space-between;padding:6px 2px;font-weight:700}
+.cards{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;min-height:70px}
+.c{width:46px;height:66px;background:#f8f8f8;color:#111;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;border:2px solid #ccc;cursor:pointer}
+.c.r{color:#d33}.c.b{background:repeating-linear-gradient(45deg,#3a9bb5,#3a9bb5 4px,#5fb4cb 4px,#5fb4cb 8px);border-color:#fff}.c.s{border-color:var(--gr);transform:translateY(-6px)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:12px}
+.modal>div{background:var(--pn);max-height:90%;overflow:auto;border-radius:12px;padding:20px;max-width:560px}
+table{border-collapse:collapse;width:100%}td{border-bottom:1px solid #4a4846;padding:4px 6px}h3{margin:14px 0 4px;color:var(--gr)}
+</style></head><body>
+<header><span class="logo" data-a="home">♟ 초스</span><span class="mu">체스 × 포커</span><button style="margin-left:auto" data-a="rules">규칙·족보</button></header>
+<main><div id="home"><h1>초스</h1><p class="mu">체스로 길을 열고, 포커로 승부를 가리세요.</p>
+<div class="card"><button class="g" data-a="ai">🤖 AI와 대결</button><button class="g" data-a="mk">🔗 온라인 방 만들기</button><div class="row"><input id="rc" placeholder="방 코드" maxlength="8"><button data-a="jn">입장</button></div></div></div>
+<div id="game"><div><div id="top"></div><div id="bd"></div><div id="bot"></div></div><div id="side"></div></div></main>
+<div class="modal" id="md"><div><h2 style="margin:0">초스 규칙</h2>
+<h3>기본</h3><p>체스 규칙대로 기물을 움직이며, 백이 먼저 시작합니다. 각자 칩 100개와 손패 4장을 가지고 시작하며, 매 턴이 시작될 때 칩 1개를 받고 손패를 4장까지 채웁니다.</p>
+<h3>쇼다운 (기물 잡기)</h3><p>상대 기물을 잡으려 하면 포커 승부가 열립니다. 잡히는 기물의 가치(폰 1, 나이트·비숍 3, 룩 5, 퀸 9)만큼 양쪽이 칩을 내어 팟을 만듭니다. 공격자와 방어자가 차례로 손패 2장을 고르고, 커뮤니티 카드 3장이 공개됩니다. 이후 공격자가 칩을 올리면(최대 10, 룩은 15) 방어자는 콜 또는 폴드를 선택합니다. 5장 족보가 높은 쪽이 팟을 가져가며, 동점이면 방어자가 이깁니다.</p>
+<p>공격자가 이기면 기물을 잡고, 지면 기물이 원래 자리로 돌아가고 턴이 끝납니다. 퀸은 손패 3장을 골라 6장 중 가장 좋은 5장으로 겨루며, 킹은 쇼다운 대상이 될 수 없습니다.</p>
+<h3>칩과 승리</h3><p>칩 3개를 내고 손패를 1장 더 받을 수 있습니다(최대 6장). 체크메이트를 하거나 상대 칩이 0이 되면 승리하며, 스테일메이트에서는 칩이 더 많은 쪽이 승리합니다.</p>
+<h3>이번 버전 안내</h3><p>캐슬링과 앙파상, 나이트·비숍의 특수 능력은 아직 적용되지 않았으며, 폰은 끝줄에서 자동으로 퀸이 됩니다.</p>
+<h3>포커 족보 (높은 순)</h3><table><tr><td>스트레이트 플러시</td><td>같은 무늬의 연속된 5장</td></tr><tr><td>포카드</td><td>같은 숫자 4장</td></tr><tr><td>풀하우스</td><td>트리플 + 원페어</td></tr><tr><td>플러시</td><td>같은 무늬 5장</td></tr><tr><td>스트레이트</td><td>연속된 숫자 5장</td></tr><tr><td>트리플</td><td>같은 숫자 3장</td></tr><tr><td>투페어</td><td>페어 2개</td></tr><tr><td>원페어</td><td>같은 숫자 2장</td></tr><tr><td>하이카드</td><td>위에 해당하지 않는 경우</td></tr></table>
+<p style="text-align:right"><button class="g" data-a="x">닫기</button></p></div></div>
+<script>
+const $=s=>document.querySelector(s),V={p:1,n:3,b:3,r:5,q:9},NM={w:'백',b:'흑'},ST='♠♥♦♣',RL=n=>n<11?n:'JQKA'[n-11],PG={k:'♚︎',q:'♛︎',r:'♜︎',b:'♝︎',n:'♞︎',p:'♟︎'};
+const CN=['하이카드','원페어','투페어','트리플','스트레이트','플러시','풀하우스','포카드','스트레이트 플러시'],rnd=a=>a.sort(()=>Math.random()-.5),oth=t=>t=='w'?'b':'w';
+let G,me,mode,sel=null,pk=[],ref,db,uid,unsub,leg=[],RC='';
+const row=i=>i>>3,col=i=>i%8,own=(c,t)=>c!='.'&&(c==c.toUpperCase())==(t=='w');
+function pm(bd,s,ao){const c=bd[s],t=own(c,'w')?'w':'b',p=c.toLowerCase(),r=row(s),f=col(s),o=[],ok=(R,F)=>R>=0&&R<8&&F>=0&&F<8;
+if(p=='p'){const d=t=='w'?-1:1;[-1,1].forEach(e=>{if(!ok(r+d,f+e))return;const i=(r+d)*8+f+e;if(ao||(bd[i]!='.'&&!own(bd[i],t)))o.push(i)});
+if(!ao&&ok(r+d,f)&&bd[(r+d)*8+f]=='.'){o.push((r+d)*8+f);const j=(r+2*d)*8+f;if(r==(t=='w'?6:1)&&bd[j]=='.')o.push(j)}return o}
+if(p=='n'||p=='k'){(p=='n'?[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]).forEach(([a,b])=>{if(ok(r+a,f+b)){const i=(r+a)*8+f+b;if(bd[i]=='.'||!own(bd[i],t))o.push(i)}});return o}
+const D=p=='r'?[[1,0],[-1,0],[0,1],[0,-1]]:p=='b'?[[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+D.forEach(([a,b])=>{let R=r+a,F=f+b;while(ok(R,F)){const i=R*8+F;if(bd[i]=='.')o.push(i);else{if(!own(bd[i],t))o.push(i);break}R+=a;F+=b}});return o}
+const atk=(bd,i,t)=>{for(let s=0;s<64;s++)if(bd[s]!='.'&&own(bd[s],t)&&pm(bd,s,1).includes(i))return 1;return 0};
+const mk=(bd,a,b)=>{let c=bd[a];const p=bd.split('');if(c=='P'&&b<8)c='Q';if(c=='p'&&b>55)c='q';p[b]=c;p[a]='.';return p.join('')};
+function legal(bd,t){const o=[];for(let s=0;s<64;s++){if(bd[s]=='.'||!own(bd[s],t))continue;for(const d of pm(bd,s)){if(bd[d].toLowerCase()=='k')continue;const nb=mk(bd,s,d);if(!atk(nb,nb.indexOf(t=='w'?'K':'k'),oth(t)))o.push([s,d])}}return o}
+function ev5(c){const r=c.map(x=>x.r).sort((a,b)=>b-a),f=c.every(x=>x.s==c[0].s);let st=0;if(new Set(r).size==5){if(r[0]-r[4]==4)st=r[0];else if(r.join()=='14,5,4,3,2')st=5}
+const n={};r.forEach(x=>n[x]=(n[x]||0)+1);const g=Object.keys(n).map(Number).sort((a,b)=>n[b]-n[a]||b-a),p=g.map(x=>n[x]).join('');
+const k=st&&f?8:p=='41'?7:p=='32'?6:f?5:st?4:p=='311'?3:p=='221'?2:p=='2111'?1:0;return[k,...(st?[st]:g)]}
+const cmp=(a,b)=>{for(let i=0;i<6;i++){const d=(a[i]||0)-(b[i]||0);if(d)return d}return 0};
+const best=(p,cm)=>{const c=[...p,...cm].map(i=>({r:2+i%13,s:i/13|0}));if(c.length<6)return ev5(c);let b;c.forEach((_,k)=>{const x=ev5(c.filter((_,j)=>j!=k));if(!b||cmp(x,b)>0)b=x});return b};
+function fresh(){const d=rnd([...Array(52).keys()]);return{bd:'rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR',t:'w',chips:{w:100,b:100},h:{w:d.splice(0,4),b:d.splice(0,4)},deck:d,pend:null,last:null,over:'',log:'백이 먼저 둡니다.',w:'',b:''}}
+function draw(){if(!G.deck.length){const u=[...G.h.w,...G.h.b,...(G.pend?G.pend.cm:[])];G.deck=rnd([...Array(52).keys()].filter(x=>!u.includes(x)))}return G.deck.pop()}
+function endTurn(){const lose=['w','b'].find(x=>G.chips[x]<=0);G.t=oth(G.t);G.chips[G.t]++;['w','b'].forEach(s=>{while(G.h[s].length<4)G.h[s].push(draw())});
+const ck=atk(G.bd,G.bd.indexOf(G.t=='w'?'K':'k'),oth(G.t)),L=legal(G.bd,G.t);
+if(lose)G.over=NM[oth(lose)]+' 승리! (상대 칩 소진)';else if(!L.length)G.over=ck?NM[oth(G.t)]+' 승리! (체크메이트)':G.chips.w==G.chips.b?'무승부 (스테일메이트)':NM[G.chips.w>G.chips.b?'w':'b']+' 승리! (스테일메이트, 칩 우세)';else if(ck)G.log+=' 체크!'}
+const need=s=>Math.min(G.h[s].length,(s==G.pend.a?G.bd[G.pend.s]:G.bd[G.pend.d]).toLowerCase()=='q'?3:2);
+function doMove(s,d){if(G.bd[d]!='.'){const a=G.t,e=oth(a),an=Math.min(V[G.bd[d].toLowerCase()],G.chips.w,G.chips.b);G.chips[a]-=an;G.chips[e]-=an;G.pend={s,d,a,e,pot:2*an,cm:[draw(),draw(),draw()],pa:[],pd:[],ph:'pa',rs:0};G.log='쇼다운 시작! 손패를 고르세요.'}
+else{G.log=NM[G.t]+' 이동.';G.bd=mk(G.bd,s,d);endTurn()}push()}
+function pick(ids){const P=G.pend;if(P.ph=='pa'){P.pa=ids;P.ph='pd'}else{P.pd=ids;P.ph='ra'}push()}
+function raise(r){const P=G.pend;r=Math.min(r,G.bd[P.s].toLowerCase()=='r'?15:10,G.chips[P.a]);G.chips[P.a]-=r;P.rs=r;P.pot+=r;if(r)P.ph='ca';else resolve(0);push()}
+function call(y){const P=G.pend;if(y){const c=Math.min(P.rs,G.chips[P.e]);G.chips[P.e]-=c;P.pot+=c}resolve(!y);push()}
+function resolve(fold){const P=G.pend,A=best(P.pa,P.cm),D=best(P.pd,P.cm),aw=fold||cmp(A,D)>0,win=aw?P.a:P.e;G.chips[win]+=P.pot;
+G.h[P.a]=G.h[P.a].filter(x=>!P.pa.includes(x));G.h[P.e]=G.h[P.e].filter(x=>!P.pd.includes(x));G.last={pa:P.pa,pd:P.pd,cm:P.cm,a:P.a,e:P.e};
+G.log='쇼다운! '+(fold?'방어자 폴드':NM[P.a]+' '+CN[A[0]]+' vs '+NM[P.e]+' '+CN[D[0]])+' → '+(aw?'기물 포획 성공':'공격 실패, 기물 복귀')+' (팟 '+P.pot+' → '+NM[win]+')';
+if(aw)G.bd=mk(G.bd,P.s,P.d);G.pend=null;endTurn()}
+function buy(){if(G.pend||G.t!=me||G.chips[me]<3||G.h[me].length>5)return;G.chips[me]-=3;G.h[me].push(draw());push()}
+function newg(){G=Object.assign(fresh(),{w:G.w,b:G.b});push()}
+function push(){sel=null;pk=[];render();if(mode=='on')ref.set(JSON.parse(JSON.stringify(G)));else setTimeout(ai,800)}
+const aiPick=(h,n)=>{let b,bs=-1;const go=(i,a)=>{if(a.length==n){const r=a.map(x=>2+x%13),s=(new Set(r).size<r.length?100:0)+r.reduce((x,y)=>x+y);if(s>bs){bs=s;b=a}return}for(;i<h.length;i++)go(i+1,[...a,h[i]])};go(0,[]);return b};
+function ai(){if(mode!='ai'||G.over)return;const P=G.pend;
+if(P){if((P.ph=='pa'&&P.a=='b')||(P.ph=='pd'&&P.e=='b'))pick(aiPick(G.h.b,need('b')));else if(P.ph=='ra'&&P.a=='b'){const k=best(P.pa,P.cm)[0];raise(k>=2?10:k==1?5:0)}else if(P.ph=='ca'&&P.e=='b')call(best(P.pd,P.cm)[0]>=1||P.rs<=5)}
+else if(G.t=='b'){const m=legal(G.bd,'b').map(x=>[x,(G.bd[x[1]]!='.'?V[G.bd[x[1]].toLowerCase()]*3:0)+Math.random()*4]).sort((a,b)=>b[1]-a[1])[0][0];doMove(m[0],m[1])}}
+const cd=(x,c='')=>`<div class="c ${[1,2].includes(x/13|0)?'r':''} ${c}" data-id="${x}">${RL(2+x%13)}${ST[x/13|0]}</div>`,bk=n=>'<div class="c b"></div>'.repeat(n);
+function render(){if(!G)return;$('#home').style.display='none';$('#game').style.display='grid';const f=me=='b',v=me||'w',o=oth(v),P=G.pend,wait=mode=='on'&&!G.b;
+leg=!G.over&&!P&&G.t==me&&!wait?legal(G.bd,me):[];let h='';
+for(let n=0;n<64;n++){const i=f?63-n:n,c=G.bd[i],m=sel!=null&&leg.some(x=>x[0]==sel&&x[1]==i);h+=`<div class="sq ${(row(i)+col(i))%2?'d':'l'} ${i==sel?'sel':''} ${m?(c!='.'?'mv cp':'mv'):''}" data-i="${i}">${c!='.'?`<span class="${c==c.toUpperCase()?'w':'k'}">${PG[c.toLowerCase()]}</span>`:''}</div>`}
+$('#bd').innerHTML=h;const bar=t=>`<div class="pl"><span>${NM[t]}${t==me?' (나)':mode=='ai'&&t=='b'?' (AI)':''}${G.t==t&&!G.over?' ●':''}</span><span>칩 ${G.chips[t]}</span></div>`;
+$('#top').innerHTML=bar(o);$('#bot').innerHTML=bar(v);
+let p=`<div class="card"><b>${G.over||(wait?'상대를 기다리는 중입니다. 방 코드: '+RC:G.t==me?'당신의 차례입니다':'상대의 차례입니다')}</b><div class="mu">${G.log}</div>${wait?'<div class="mu">링크 끝에 #'+RC+' 를 붙여 공유하셔도 됩니다.</div>':''}</div>`;
+if(P){const pr=P.ph=='pa'?P.a:P.ph=='pd'?P.e:null,open=P.ph=='ra'||P.ph=='ca',sh=(ids,s)=>s==me?ids.map(x=>cd(x)).join(''):bk(ids.length);
+p+=`<div class="card"><b>⚔ 쇼다운 · 팟 ${P.pot}</b><div class="mu">커뮤니티 카드</div><div class="cards">${open?P.cm.map(x=>cd(x)).join(''):bk(3)}</div><div class="mu">${NM[P.a]}(공격) / ${NM[P.e]}(방어)가 고른 카드</div><div class="cards">${sh(P.pa,P.a)}${P.pa.length&&P.pd.length?'<span> | </span>':''}${sh(P.pd,P.e)}</div>`;
+if(pr==me)p+=`<button class="g" data-a="ok" ${pk.length==need(me)?'':'disabled'}>선택 확정 (${pk.length}/${need(me)})</button>`;
+else if(P.ph=='ra'&&me==P.a)p+='<div class="mu">칩을 올리시겠어요?</div><div class="row">'+[0,5,10,...(G.bd[P.s].toLowerCase()=='r'?[15]:[])].map(r=>`<button data-a="r" data-v="${r}">${r?'+'+r:'올리지 않음'}</button>`).join('')+'</div>';
+else if(P.ph=='ca'&&me==P.e)p+=`<div class="mu">상대가 ${P.rs}칩을 올렸습니다.</div><div class="row"><button class="g" data-a="call">콜</button><button data-a="fold">폴드</button></div>`;
+else p+='<div class="mu">상대의 선택을 기다리는 중...</div>';p+='</div>'}
+else if(G.last){const L=G.last;p+=`<div class="card"><b>지난 쇼다운</b><div class="cards">${L.cm.map(x=>cd(x)).join('')}</div><div class="cards">${L.pa.map(x=>cd(x)).join('')}<span> vs </span>${L.pd.map(x=>cd(x)).join('')}</div><div class="mu">왼쪽: ${NM[L.a]}(공격) · 오른쪽: ${NM[L.e]}(방어)</div></div>`}
+if(me)p+=`<div class="card"><b>내 손패</b><div class="cards">${G.h[me].map(x=>cd(x,pk.includes(x)?'s':'')).join('')}</div><button data-a="buy" ${!P&&G.t==me&&G.chips[me]>=3&&G.h[me].length<6&&!G.over?'':'disabled'}>카드 1장 받기 (칩 3)</button></div>`;
+if(G.over&&(mode=='ai'||me=='w'))p+='<button class="g" data-a="nw">새 게임</button>';$('#side').innerHTML=p}
+function sqc(i){if(!G||!leg.length)return;const m=leg.find(x=>x[0]==sel&&x[1]==i);if(m)return doMove(sel,i);const c=G.bd[i];sel=c!='.'&&own(c,me)&&leg.some(x=>x[0]==i)?i:null;render()}
+function cc(id){const P=G&&G.pend;if(!P)return;if((P.ph=='pa'?P.a:P.ph=='pd'?P.e:null)!=me||!G.h[me].includes(id))return;const k=pk.indexOf(id);k>=0?pk.splice(k,1):pk.length<need(me)&&pk.push(id);render()}
+function startAI(){mode='ai';me='w';G=fresh();sel=null;pk=[];render()}
+async function join(code,create){if(!db){alert('온라인 기능을 사용할 수 없습니다. 로그인 상태를 확인해 주세요.');return}
+code=(code||'').trim().toUpperCase();if(!code)return;RC=code;ref=db.doc('rooms/'+code);const s=await ref.get();let d=s.exists?JSON.parse(JSON.stringify(s.data())):null;
+if(!d){if(!create){alert('방을 찾을 수 없습니다.');return}d=fresh();d.w=uid;ref.set(d)}else if(!d.b&&d.w!=uid){d.b=uid;ref.set(d)}
+try{location.hash=code}catch(e){}mode='on';G=d;me=d.w==uid?'w':d.b==uid?'b':null;unsub&&unsub();unsub=ref.onSnapshot(sn=>{if(sn.exists){G=JSON.parse(JSON.stringify(sn.data()));if(!me)me=G.w==uid?'w':G.b==uid?'b':null;render()}});render()}
+const A={ai:startAI,mk:()=>join(Math.random().toString(36).slice(2,7).toUpperCase(),1),jn:()=>join($('#rc').value),rules:()=>$('#md').style.display='flex',x:()=>$('#md').style.display='none',
+home:()=>{unsub&&unsub();unsub=0;G=null;$('#home').style.display='';$('#game').style.display='none'},ok:()=>pick(pk),r:b=>raise(+b.dataset.v),call:()=>call(1),fold:()=>call(0),buy,nw:newg};
+document.addEventListener('click',e=>{const t=e.target,q=t.closest('.sq'),c=t.closest('.c[data-id]'),b=t.closest('[data-a]');if(q)return sqc(+q.dataset.i);if(c)return cc(+c.dataset.id);if(!b){if(t.id=='md')A.x();return}A[b.dataset.a](b)});
+(async()=>{try{if(window.claude){db=await claude.use('db');const u=await claude.use('user');uid=u?await u.id():null;if(!uid)db=null}}catch(e){db=null}
+const h=location.hash.slice(1);if(h&&db)join(h)})();
+</script></body></html>
